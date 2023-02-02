@@ -8,7 +8,7 @@ let  urlServerMongoDb = "mongodb://localhost:27017/";
 let http = require("http");
 let url = require("url");
 
-let database = "5AInf_2";
+let database = "5AInf_3";
 
 //DEFINISCO IL SERVER
 let json, op;
@@ -19,106 +19,60 @@ let server = http.createServer(function(req, res){
     //Decodifico la richiesta ed eseguo la query interessata
     let scelta = (url.parse(req.url)).pathname;
     switch(scelta){
-        case "/q1":
-            find(res, "persone", {nome:/^L/},{});
+        case "/i1":
+            insertMany(res,"utenti",[
+                {_id:1, nome:"Carlo", cognome:"Ferrero", residenza:"Fossano", anni:54},
+                {_id:2, nome:"Leopoldo", cognome:"Marengo", residenza:"Cuneo", anni:65},
+                {_id:3, nome:"Mattia", cognome:"Manzo", residenza:"Bra", anni:22},
+                {_id:4, nome:"Rosanna", cognome:"Gelso", residenza:"Savigliano", anni:35},
+                {_id:5, nome:"Margherita", cognome:"Pea", residenza:"Cuneo", anni:18},
+                {_id:6, nome:"Leone", cognome:"Manzo", residenza:"Fossano", anni:43},
+                {_id:7, nome:"Albana", cognome:"Renzi", residenza:"Bra", anni:48},
+                {_id:8, nome:"Elisa", cognome:"Basso", residenza:"Savigliano", anni:31}
+            ],{});
             break;
-
+        case "/i2":
+            insertMany(res,"transazioni",[
+                {mittente:4, destinatario:3, somma:54.6, data:new Date("2020-08-16")},
+                {mittente:3, destinatario:5, somma:20.0, data:new Date("2020-09-18")},
+                {mittente:4, destinatario:3, somma:5.60, data:new Date("2020-10-23")},
+                {mittente:5, destinatario:2, somma:14.3, data:new Date("2020-12-03")},
+                {mittente:2, destinatario:6, somma:12.0, data:new Date("2021-01-14")},
+                {mittente:8, destinatario:5, somma:100.0, data:new Date("2021-01-20")},
+                {mittente:1, destinatario:3, somma:45.0, data:new Date("2021-01-22")},
+                {mittente:8, destinatario:2, somma:34.8, data:new Date("2021-01-22")},
+                {mittente:3, destinatario:7, somma:200.0, data:new Date("2021-01-27")}
+            ],{});
+                break;
+        case "/q1":
+            find(res,"utenti",{residenza:"Fossano"},{});
+            break;
         case "/q2":
-            find(res, "voti", {},{});
-        break;
-
+            find(res,"utenti",{$or:[{nome:/^L/},{nome:/^C/}],anni:{$gt:50}},{});
+            break;
         case "/q3":
-            find(res, "voti", {codP:4},{voto:1});
-        break;
-
+            limit(res,"utenti",{cognome:/o$/},{nome:1, cognome:1}, 2);
+            break;
         case "/q4":
-            remove(res, "persone", {});
-        break;
-
-        //Dato il nome di una persona ritornare i suoi voti
+            op = [
+                {$group:{_id:{}, residenza:{}}} // GROUP
+            ];
+            aggregate(res,"utenti",op);
+            break;
         case "/q5":
-            let persona = "Leopoldo";
-            find2(res, "persone", {nome:persona}, {_id:1}, function(ris){
+            let cogn = "Gelso";
+            find2(res, "utenti", {cognome:cogn}, {_id:1}, function(ris) {
                 //res.end(JSON.stringify(ris));
                 //Prendere il codice
                 console.log(ris); //ARRAY
-                let id = ris[0]._id; 
+                let id = ris[0]._id;
                 console.log(id);
-                console.log({codP:id});
-
-                //Effettuare la seconda query
-                //RICORDARSI CHE è PUNTIGLIOSO SUI TIPI
-                find2(res, "voti", {codP:parseInt(id)}, {codP:0}, function(ris){
-                    /*for(let i in ris){
-                        ris[i].persona = persona;
-                    }*/
-                    /*for(let item of ris){
-                        item.persona = persona;
-                    }*/
-                    ris.forEach(element => {
-                        element.persona = persona;
-                    });
-
-                    res.end(JSON.stringify(ris));
-                });
+                console.log({codP: id});
+                find(res, "transazioni", {mittente: parseInt(id)}, {data:0});
             });
             break;
-
         case "/q6":
-            /* L'ordine delle funzione è fondamentale */
-            op = [
-                {$match:{nome:/o$/}}, //FIND / WHERE
-                {$project:{_id:0}},//SELECT
-                {$limit:2},  
-                {$sort:{nome:1}}, //Se metto sort prima di limit ci sarebbe Giancarlo come primo
-                /*
-                    group:{ indico tutti gli attributi 
-                        che verranno calcolati e 
-                        visualizzati}
-                */
-                {$group:{_id:{}, contPersone:{$sum:1}}},
-                {$project:{_id:0}}
-            ];
-            aggregate(res, "persone", op);
-            break;
-
-        case "/q7":
-            /* L'ordine delle funzione è fondamentale */
-            op = [
-                {$group:{_id:{persona:"$codP"}, contVoti:{$sum:1}}}
-            ];
-            aggregate(res, "voti", op);
-            break;
-
-        case "/i1":
-            insertMany(res, "persone", 
-            [
-                {_id:"1", nome:"Francesca"},
-                {_id:"2", nome:"Leonardo"},
-                {_id:"3", nome:"Jessica"},
-                {_id:"4", nome:"Leopoldo"},
-                {_id:"5", nome:"Giancarlo"},
-                {_id:"6", nome:"Renata"},
-                {_id:"7", nome:"Giuseppe"}
-            ]
-            ,{});
-            break;
-
-        case "/i2":
-            insertMany(res, "voti", 
-            [
-                { codP:1, voto:10},
-                { codP:2, voto:7},
-                { codP:3, voto:3},
-                { codP:4, voto:4},
-                { codP:4, voto:3},
-                { codP:5, voto:5},
-                { codP:6, voto:6},
-                { codP:7, voto:7},
-                { codP:7, voto:4},
-                { codP:7, voto:5}
-            ]
-            ,{});
+            cont(res,"transazioni",{somma:{$gt:20}})
             break;
         
         default:
