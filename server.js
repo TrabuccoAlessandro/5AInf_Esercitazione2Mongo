@@ -54,8 +54,8 @@ let server = http.createServer(function(req, res){
             limit(res,"utenti",{cognome:/o$/},{nome:1, cognome:1}, 2);
             break;
         case "/q4":
-            op = [
-                {$group:{_id:{}, residenza:{}}} // GROUP
+            op=[
+                {$group:{_id:{residenza:"$residenza"},media:{$avg:"$anni"}}}
             ];
             aggregate(res,"utenti",op);
             break;
@@ -73,6 +73,20 @@ let server = http.createServer(function(req, res){
             break;
         case "/q6":
             cont(res,"transazioni",{somma:{$gt:20}})
+            break;
+        case "/q7":
+
+            break;
+        case "/q8":
+            //Raggruppa i destinatari e somma per ciascuno il denaro ricevuto
+            op=[
+                {$group:{_id:{destinatario:"$destinatario"},sommaDen:{$sum:"$somma"}}}
+            ]
+            aggregate(res,"transazioni",op);
+            break;
+        case "/q9":
+            let data = new Date("2021-01-01");
+            find(res,"transazioni",{data:{$gt:data}},{});
             break;
         
         default:
