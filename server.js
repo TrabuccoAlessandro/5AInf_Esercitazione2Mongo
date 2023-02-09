@@ -75,7 +75,26 @@ let server = http.createServer(function(req, res){
             cont(res,"transazioni",{somma:{$gt:20}})
             break;
         case "/q7":
-
+            find2(res,"utenti",{nome:"Mattia",cognome:"Manzo"},{},function (ris){
+               let id = ris[0]._id;
+               let opzioni = [
+                   {$match:{destinatario:id}},
+                   {$group:{_id:"$destinatario", entrate:{$sum: "$somma"}}}
+               ];
+               aggregate2(res,"transazioni",opzioni,function (ris){
+                   let entrate = ris[0].entrate;
+                   opzioni = [
+                       {$match:{mittente:id}},
+                       {$group:{_id:"mittente", uscite:{$sum: "$somma"}}}
+                   ]
+                   aggregate2(res,"transazioni",opzioni,function (ris){
+                       let uscite = ris[0].uscite;
+                       let bilancio = entrate-uscite;
+                       json = {cod:1,desc:"Il resoconto di Mattia Manzo è "+ bilancio};
+                       res.end(JSON.stringify(json));
+                   });
+               });
+            });
             break;
         case "/q8":
             //Raggruppa i destinatari e somma per ciascuno il denaro ricevuto
@@ -159,6 +178,22 @@ function aggregate(res, col, opzioni){
             obj = { cod:0, desc:"Dati trovati con successo", ris};
             res.end(JSON.stringify(obj));
             conn.close();
+        });
+
+        promise.catch(function(error){
+            obj = { cod:-2, desc:"Errore nella ricerca"}
+            res.end(JSON.stringify(obj));
+            conn.close();
+        });
+    });
+}
+
+function aggregate2(res, col, opzioni,callback){
+    creaConnessione(database, res, function(conn, db){
+        let promise = db.collection(col).aggregate(opzioni).toArray();
+        promise.then(function(ris){
+            conn.close();
+            callback(ris);
         });
 
         promise.catch(function(error){
